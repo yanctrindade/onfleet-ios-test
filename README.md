@@ -1,2 +1,29 @@
 # internal-mobile-ios-challenge
-A take home challenge for evaluating iOS engineers for the Mobile team
+This is a simple phonebook app that needs to be refactored as a take home challenge for evaluating iOS engineers for the Mobile team.
+
+# Description
+This is a simple phone book app written in UIKit that combines two data sources with Combine. It also has random generation of new data.
+
+# Requirements
+
+Please refactor the codebase to the requirements below:
+
+1. Refactor from Combine to AsyncSequence for the data source handling.
+
+2. Refactor view model to a Redux-style state machine.
+- You may use any Redux-style framework. (eg. TCA, ReSwift, etc)
+
+3. Any improvements that you see fit.
+- Which other improvements do you feel are most important, and why?
+
+4. Submit a Git repo.
+- Please email gustav@onfleet.com
+- You can send a zipped repo, or a link to a repo that we can access.
+- We'd like to see your commit history.
+
+# Notes
+
+- We don't expect you to spend more than a couple of hours on this, don't overthink it.
+- You are allowed to use AI, but please tell us which one you used and how you used it.
+
+

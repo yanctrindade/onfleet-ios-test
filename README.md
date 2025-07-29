@@ -9,12 +9,16 @@ This is a simple phone book app written in UIKit that combines two data sources 
 Please refactor the codebase to the requirements below:
 
 1. Refactor from Combine to AsyncSequence for the data source handling.
+- Make the data handling thread-safe.
+
 
 2. Refactor view model to a Redux-style state machine.
 - You may use any Redux-style framework. (eg. TCA, ReSwift, etc)
 
+
 3. Any improvements that you see fit.
 - Which other improvements do you feel are most important, and why?
+
 
 4. Submit a Git repo.
 - Please email gustav@onfleet.com

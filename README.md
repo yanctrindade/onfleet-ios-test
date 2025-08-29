@@ -8,19 +8,21 @@ This is a simple phone book app written in UIKit that combines two data sources 
 
 Please refactor the codebase to the requirements below:
 
-1. Refactor from Combine to AsyncSequence for the data source handling.
+1. Maintain the threaded nature of the code in `PhoneBook/Sources/View/PhonebookViewController.swift` function `addRandomizedRecords`. It is meant to simulate a multi-thread attempt for access to a critical area. You are otherwise free to refactor it.
+
+2. Refactor from Combine to AsyncSequence for the data source handling.
 - Make the data handling thread-safe.
 
 
-2. Refactor view model to a Redux-style state machine.
+3. Refactor view model to a Redux-style state machine.
 - You may use any Redux-style framework. (eg. TCA, ReSwift, etc)
 
 
-3. Any improvements that you see fit.
+4. Any improvements that you see fit.
 - Which other improvements do you feel are most important, and why?
 
 
-4. Submit a Git repo.
+5. Submit a Git repo.
 - Please email gustav@onfleet.com
 - You can send a zipped repo, or a link to a repo that we can access.
 - We'd like to see your commit history.
@@ -29,5 +31,5 @@ Please refactor the codebase to the requirements below:
 
 - We don't expect you to spend more than a couple of hours on this, don't overthink it.
 - You are allowed to use AI, but please tell us which one you used and how you used it.
-
+- 
 

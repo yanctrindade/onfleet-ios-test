@@ -131,7 +131,10 @@ private extension PhoneBookViewController {
         let faker = Faker()
         let records = (0..<5).map({ _ in self.makePhoneBookRecord(using: faker) })
         let group = DispatchGroup()
-        
+
+        // Please keep the randomizer threaded, but you can refactor it.
+        // It simulates multi-threaded access to a critical area.
+
         DispatchQueue.concurrentPerform(
             iterations: 4,
             execute: { [managerQueue, manager] index in

@@ -46,7 +46,10 @@ let project = Project(
             infoPlist: .default,
             sources: ["PhoneBook/Tests/UnitTests/**"],
             resources: [],
-            dependencies: [.target(name: "PhoneBook")]
+            dependencies: [
+                .target(name: "PhoneBook"),
+                .external(name: "ComposableArchitecture")
+            ]
         ),
     ]
 )

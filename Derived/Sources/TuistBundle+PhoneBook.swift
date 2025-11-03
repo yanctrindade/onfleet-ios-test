@@ -16,7 +16,7 @@ extension Foundation.Bundle {
 }
 // MARK: - Objective-C Bundle Accessor
 @objc
-public class PhoneBookResources: NSObject {
+public final class PhoneBookResources: NSObject {
 @objc public class var bundle: Bundle {
     return .module
 }

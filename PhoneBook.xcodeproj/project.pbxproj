@@ -11,6 +11,8 @@
 		1D72FDA0C023C7D5155D06CA /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA9B049FC3FAC98453626A3A /* Preview Assets.xcassets */; };
 		26E1CED2265217B0AD26213F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A81C8EDB815EDDF2FBB09D /* AppDelegate.swift */; };
 		42C1FB92C9F4527493EABCF5 /* TuistAssets+PhoneBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2951AF71CFBE9396893C2F0 /* TuistAssets+PhoneBook.swift */; };
+		5951A3CB2EB87ADE005E0248 /* Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5951A3C92EB87ADE005E0248 /* Store.swift */; };
+		5951A3CC2EB87ADE005E0248 /* PhoneBookRedux.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5951A3C82EB87ADE005E0248 /* PhoneBookRedux.swift */; };
 		6B7236612E37CA0800122613 /* Fakery in Frameworks */ = {isa = PBXBuildFile; productRef = 6B7236602E37CA0800122613 /* Fakery */; };
 		748201C7C21345250CA92AF0 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9D4C1B5AA1C22D89E6C1296 /* SceneDelegate.swift */; };
 		93139E3ED4CFD5FD43D49248 /* PhoneBookViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17A1EA8D66F405C434DE4D96 /* PhoneBookViewController.swift */; };
@@ -63,6 +65,8 @@
 		4048D140229FE1DC189498CB /* PhoneBookSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneBookSource.swift; sourceTree = "<group>"; };
 		41F230312D1AFAF1D04AE36A /* UnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		53B45A3A5372303AB2338CD2 /* TuistBundle+PhoneBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TuistBundle+PhoneBook.swift"; sourceTree = "<group>"; };
+		5951A3C82EB87ADE005E0248 /* PhoneBookRedux.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneBookRedux.swift; sourceTree = "<group>"; };
+		5951A3C92EB87ADE005E0248 /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
 		5B83CAF61EB69407D59A75B4 /* PhoneBook-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "PhoneBook-Info.plist"; sourceTree = "<group>"; };
 		6C3F3AFF5A068DE3C423F4AF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7AD4BAE04E37857EBC5B6821 /* PhoneBookModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneBookModels.swift; sourceTree = "<group>"; };
@@ -127,6 +131,15 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		5951A3CA2EB87ADE005E0248 /* Redux */ = {
+			isa = PBXGroup;
+			children = (
+				5951A3C82EB87ADE005E0248 /* PhoneBookRedux.swift */,
+				5951A3C92EB87ADE005E0248 /* Store.swift */,
+			);
+			path = Redux;
+			sourceTree = "<group>";
+		};
 		61DCA24DD7C3C0C3A7C5A83B /* Project */ = {
 			isa = PBXGroup;
 			children = (
@@ -173,6 +186,7 @@
 		BD77C43068BAFB0E148E4D62 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				5951A3CA2EB87ADE005E0248 /* Redux */,
 				DE6B9783D23D7933AB30BBF7 /* Model */,
 				EF40FE2CCC52B1EA6DDFC046 /* View */,
 				F7A81C8EDB815EDDF2FBB09D /* AppDelegate.swift */,
@@ -344,6 +358,8 @@
 				26E1CED2265217B0AD26213F /* AppDelegate.swift in Sources */,
 				A1035284F0908352017F58B3 /* PhoneBookManager.swift in Sources */,
 				B503502465FA5DFBB14734EC /* PhoneBookModels.swift in Sources */,
+				5951A3CB2EB87ADE005E0248 /* Store.swift in Sources */,
+				5951A3CC2EB87ADE005E0248 /* PhoneBookRedux.swift in Sources */,
 				F7AC341A7F6FAA855D6FEDFD /* PhoneBookSource.swift in Sources */,
 				748201C7C21345250CA92AF0 /* SceneDelegate.swift in Sources */,
 				EC932233C7A0C4FBEC8CE73E /* CreatePhoneBookRecordViewController.swift in Sources */,

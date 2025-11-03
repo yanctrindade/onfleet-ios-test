@@ -7,11 +7,12 @@ class PhoneBookViewController: UIViewController {
     @IBOutlet weak var searchBar: UISearchBar!
     @IBOutlet weak var randomizeButton: UIButton!
     
+    // PHASE 1: Keep existing manager + Add Redux store
     var manager: PhoneBookManager!
+    private let store = Store(initialState: PhoneBookState.initial, reducer: PhoneBookReducer())
     
-    private var searchText: String?
-    private var filteredRecords: [PhoneBookRecord] = []
     private var observationTask: Task<Void, Never>?
+    private var storeObservationTask: Task<Void, Never>?
     private static let cellIdentifier = "PhoneBookRecordCell"
     
     override func viewDidLoad() {
@@ -28,12 +29,17 @@ class PhoneBookViewController: UIViewController {
 
         self.tableView.tableHeaderView = self.searchBar
         
-        // Start observing records changes
-        startObservingRecords()
+        // PHASE 1: Start both old and new observation systems
+        startObservingRecords()  // Existing AsyncSequence observation
+        startObservingStore()    // New Redux store observation
+        
+        // Send initial Redux action
+        store.send(.viewDidLoad)
     }
     
     deinit {
         observationTask?.cancel()
+        storeObservationTask?.cancel()
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
@@ -55,7 +61,7 @@ extension PhoneBookViewController: UITableViewDataSource {
         _ tableView: UITableView,
         numberOfRowsInSection section: Int
     ) -> Int {
-        return self.filteredRecords.count
+        return store.state.filteredRecords.count
     }
     
     func tableView(
@@ -66,7 +72,7 @@ extension PhoneBookViewController: UITableViewDataSource {
             withIdentifier: Self.cellIdentifier,
             for: indexPath
         )
-        let record = self.filteredRecords[indexPath.row]
+        let record = store.state.filteredRecords[indexPath.row]
         var content = cell.defaultContentConfiguration()
         content.text = record.detail.name
         content.secondaryText = record.contact.phoneNumber
@@ -84,7 +90,10 @@ extension PhoneBookViewController: UISearchBarDelegate {
         _ searchBar: UISearchBar,
         textDidChange searchText: String
     ) {
-        self.searchText = searchText.isEmpty ? nil : searchText
+        // PHASE 1: Dispatch Redux action instead of direct state manipulation
+        store.send(.searchTextChanged(searchText))
+        
+        // Keep old behavior for compatibility during Phase 1
         updateFilteredRecords()
     }
     
@@ -96,11 +105,12 @@ extension PhoneBookViewController {
     
     @IBAction
     func randomizeButtonTapped(_ sender: Any) {
-        self.randomizeButton.isEnabled = false
+        // PHASE 1: Dispatch Redux actions
+        store.send(.randomizeButtonTapped)
         
         Task { @MainActor in
             await self.addRandomizedRecords()
-            self.randomizeButton.isEnabled = true
+            store.send(.randomizationCompleted)
         }
     }
     
@@ -108,11 +118,37 @@ extension PhoneBookViewController {
 
 private extension PhoneBookViewController {
     
+    // PHASE 1: Keep existing AsyncSequence observation
     func startObservingRecords() {
         observationTask = Task { @MainActor in
             for await records in manager.recordsSequence {
+                // Bridge to Redux store
+                store.send(.recordsUpdated(records))
                 await updateFilteredRecords(with: records)
             }
+        }
+    }
+    
+    // PHASE 1: Add Redux store observation  
+    func startObservingStore() {
+        storeObservationTask = Task { @MainActor in
+            // Observe store state changes
+            for await state in store.$state.values {
+                handleStateChange(state)
+            }
+        }
+    }
+    
+    func handleStateChange(_ state: PhoneBookState) {
+        // Update UI based on Redux state
+        self.randomizeButton.isEnabled = !state.isRandomizing
+        
+        // Reload table view with Redux filtered records
+        self.tableView.reloadData()
+        
+        // Update search bar if needed
+        if searchBar.text != state.searchText {
+            searchBar.text = state.searchText
         }
     }
     
@@ -120,7 +156,7 @@ private extension PhoneBookViewController {
         let currentRecords = records ?? manager.currentRecords
         
         let filtered: [PhoneBookRecord]
-        if let searchText = searchText, !searchText.isEmpty {
+        if let searchText = store.state.searchText, !searchText.isEmpty {
             filtered = currentRecords.filter {
                 $0.detail.name.localizedCaseInsensitiveContains(searchText) ||
                 $0.contact.phoneNumber.localizedCaseInsensitiveContains(searchText)
@@ -129,8 +165,7 @@ private extension PhoneBookViewController {
             filtered = currentRecords
         }
         
-        self.filteredRecords = filtered
-        self.tableView.reloadData()
+        store.send(.recordsFiltered(filtered))
     }
     
     func updateFilteredRecords() {

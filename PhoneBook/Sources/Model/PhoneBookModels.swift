@@ -1,19 +1,19 @@
 
-struct PersonDetail: Identifiable, Sendable {
+struct PersonDetail: Identifiable, Sendable, Equatable {
     
     let id: String
     let name: String
     
 }
 
-struct PersonContact: Identifiable, Sendable {
+struct PersonContact: Identifiable, Sendable, Equatable {
     
     let id: String
     let phoneNumber: String
     
 }
 
-struct PhoneBookRecord: Identifiable, Sendable {
+struct PhoneBookRecord: Identifiable, Sendable, Equatable {
     
     let id: String
     let detail: PersonDetail

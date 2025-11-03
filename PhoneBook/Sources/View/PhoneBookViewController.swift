@@ -1,5 +1,4 @@
 import UIKit
-import Combine
 import Fakery
 
 class PhoneBookViewController: UIViewController {
@@ -10,12 +9,10 @@ class PhoneBookViewController: UIViewController {
     
     var manager: PhoneBookManager!
     
-    @Published
     private var searchText: String?
     private var filteredRecords: [PhoneBookRecord] = []
-    private var cancellables = Set<AnyCancellable>()
+    private var observationTask: Task<Void, Never>?
     private static let cellIdentifier = "PhoneBookRecordCell"
-    private let managerQueue = DispatchQueue(label: "com.phonebook.manager", qos: .userInitiated)
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -30,27 +27,13 @@ class PhoneBookViewController: UIViewController {
         )
 
         self.tableView.tableHeaderView = self.searchBar
-
-        Publishers.CombineLatest(
-            self.manager.$records,
-            self.$searchText
-        )
-        .map({ records, searchText in
-            guard let searchText,
-                  !searchText.isEmpty else {
-                return records
-            }
-            return records.filter {
-                $0.detail.name.localizedCaseInsensitiveContains(searchText) ||
-                $0.contact.phoneNumber.localizedCaseInsensitiveContains(searchText)
-            }
-        })
-        .receive(on: DispatchQueue.main)
-        .sink(receiveValue: { [weak self] filtered in
-            self?.filteredRecords = filtered
-            self?.tableView.reloadData()
-        })
-        .store(in: &self.cancellables)
+        
+        // Start observing records changes
+        startObservingRecords()
+    }
+    
+    deinit {
+        observationTask?.cancel()
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
@@ -101,7 +84,8 @@ extension PhoneBookViewController: UISearchBarDelegate {
         _ searchBar: UISearchBar,
         textDidChange searchText: String
     ) {
-        self.searchText = searchText
+        self.searchText = searchText.isEmpty ? nil : searchText
+        updateFilteredRecords()
     }
     
 }
@@ -123,6 +107,37 @@ extension PhoneBookViewController {
 }
 
 private extension PhoneBookViewController {
+    
+    func startObservingRecords() {
+        observationTask = Task { @MainActor in
+            for await records in manager.recordsSequence {
+                await updateFilteredRecords(with: records)
+            }
+        }
+    }
+    
+    func updateFilteredRecords(with records: [PhoneBookRecord]? = nil) async {
+        let currentRecords = records ?? manager.currentRecords
+        
+        let filtered: [PhoneBookRecord]
+        if let searchText = searchText, !searchText.isEmpty {
+            filtered = currentRecords.filter {
+                $0.detail.name.localizedCaseInsensitiveContains(searchText) ||
+                $0.contact.phoneNumber.localizedCaseInsensitiveContains(searchText)
+            }
+        } else {
+            filtered = currentRecords
+        }
+        
+        self.filteredRecords = filtered
+        self.tableView.reloadData()
+    }
+    
+    func updateFilteredRecords() {
+        Task { @MainActor in
+            await updateFilteredRecords()
+        }
+    }
     
     func makePhoneBookRecord(using faker: Faker) -> NewPhoneBookRecord {
         return .init(

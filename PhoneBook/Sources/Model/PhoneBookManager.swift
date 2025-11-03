@@ -1,13 +1,32 @@
 import Foundation
-import Combine
 
-@MainActor
-final class PhoneBookManager: ObservableObject {
+final class PhoneBookManager {
     
-    @Published
-    private(set) var records: [PhoneBookRecord] = []
+    private var records: [PhoneBookRecord] = []
+    private var _recordsStream: AsyncStream<[PhoneBookRecord]>?
+    private var _recordsContinuation: AsyncStream<[PhoneBookRecord]>.Continuation?
     let source: PhoneBookSource
     private var observationTask: Task<Void, Never>?
+    
+    // Computed property to safely access records from main actor
+    @MainActor 
+    var currentRecords: [PhoneBookRecord] {
+        return records
+    }
+    
+    var recordsSequence: AsyncStream<[PhoneBookRecord]> {
+        if let stream = _recordsStream {
+            return stream
+        }
+        
+        let (stream, continuation) = AsyncStream<[PhoneBookRecord]>.makeStream()
+        _recordsStream = stream
+        _recordsContinuation = continuation
+        
+        continuation.yield(records)
+        
+        return stream
+    }
     
     init(source: PhoneBookSource) {
         self.source = source
@@ -36,7 +55,7 @@ final class PhoneBookManager: ObservableObject {
 private extension PhoneBookManager {
     
     func startObservingSource() {
-        observationTask = Task { @MainActor in
+        observationTask = Task {
             await observeDataSources()
         }
     }
@@ -46,13 +65,13 @@ private extension PhoneBookManager {
         // We'll observe both sources and manually combine the data
         await withTaskGroup(of: Void.self) { group in
             
-            group.addTask { @MainActor in
+            group.addTask {
                 for await _ in await self.source.personDetailsSequence {
                     await self.updateRecords()
                 }
             }
             
-            group.addTask { @MainActor in
+            group.addTask {
                 for await _ in await self.source.personContactsSequence {
                     await self.updateRecords()
                 }
@@ -77,6 +96,7 @@ private extension PhoneBookManager {
 
         await MainActor.run {
             self.records = combinedRecords
+            self._recordsContinuation?.yield(combinedRecords)
         }
     }
     
@@ -84,7 +104,6 @@ private extension PhoneBookManager {
 
 struct PhoneBookManagerFactory {
     
-    @MainActor
     static func makeDefaultManager() -> PhoneBookManager {
         let details = [
             PersonDetail(

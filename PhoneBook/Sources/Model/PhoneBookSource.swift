@@ -5,6 +5,10 @@ actor PhoneBookSource {
     private var _personDetails: [PersonDetail]
     private var _personContacts: [PersonContact]
     
+    // Store continuations to notify subscribers of changes
+    private var _detailsContinuations: [UUID: AsyncStream<[PersonDetail]>.Continuation] = [:]
+    private var _contactsContinuations: [UUID: AsyncStream<[PersonContact]>.Continuation] = [:]
+    
     init(
         personDetails: [PersonDetail],
         personContacts: [PersonContact]
@@ -15,15 +19,37 @@ actor PhoneBookSource {
     
     var personDetailsSequence: AsyncStream<[PersonDetail]> {
         AsyncStream { continuation in
+            // Send current value immediately
             continuation.yield(_personDetails)
-            // TODO: store continuations and notify on changes
+            
+            // Store continuation for future updates with unique ID
+            let id = UUID()
+            _detailsContinuations[id] = continuation
+            
+            // Clean up when cancelled
+            continuation.onTermination = { @Sendable [weak self] _ in
+                Task {
+                    await self?.removeDetailsContinuation(id)
+                }
+            }
         }
     }
 
     var personContactsSequence: AsyncStream<[PersonContact]> {
         AsyncStream { continuation in
+            // Send current value immediately  
             continuation.yield(_personContacts)
-            // TODO: store continuations and notify on changes
+            
+            // Store continuation for future updates with unique ID
+            let id = UUID()
+            _contactsContinuations[id] = continuation
+            
+            // Clean up when cancelled
+            continuation.onTermination = { @Sendable [weak self] _ in
+                Task {
+                    await self?.removeContactsContinuation(id)
+                }
+            }
         }
     }
     
@@ -33,6 +59,10 @@ actor PhoneBookSource {
     ) {
         _personDetails.append(detail)
         _personContacts.append(contact)
+        
+        // Notify all subscribers of the changes
+        notifyDetailsSubscribers()
+        notifyContactsSubscribers()
     }
     
     func getCurrentDetails() -> [PersonDetail] {
@@ -41,6 +71,28 @@ actor PhoneBookSource {
     
     func getCurrentContacts() -> [PersonContact] {
         return _personContacts
+    }
+    
+    // MARK: - Private Helper Methods
+    
+    private func removeDetailsContinuation(_ id: UUID) {
+        _detailsContinuations.removeValue(forKey: id)
+    }
+    
+    private func removeContactsContinuation(_ id: UUID) {
+        _contactsContinuations.removeValue(forKey: id)
+    }
+    
+    private func notifyDetailsSubscribers() {
+        for continuation in _detailsContinuations.values {
+            continuation.yield(_personDetails)
+        }
+    }
+    
+    private func notifyContactsSubscribers() {
+        for continuation in _contactsContinuations.values {
+            continuation.yield(_personContacts)
+        }
     }
     
 }

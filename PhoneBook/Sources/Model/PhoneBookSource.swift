@@ -1,33 +1,98 @@
 import Foundation
-import Combine
 
-final class PhoneBookSource {
+actor PhoneBookSource {
     
-    private let personDetailsSubject: CurrentValueSubject<[PersonDetail], Never>
-    private let personContactsSubject: CurrentValueSubject<[PersonContact], Never>
+    private var _personDetails: [PersonDetail]
+    private var _personContacts: [PersonContact]
     
-    var personDetails: AnyPublisher<[PersonDetail], Never> {
-        return self.personDetailsSubject.eraseToAnyPublisher()
-    }
-    
-    var personContacts: AnyPublisher<[PersonContact], Never> {
-        return self.personContactsSubject.eraseToAnyPublisher()
-    }
+    // Store continuations to notify subscribers of changes
+    private var _detailsContinuations: [UUID: AsyncStream<[PersonDetail]>.Continuation] = [:]
+    private var _contactsContinuations: [UUID: AsyncStream<[PersonContact]>.Continuation] = [:]
     
     init(
         personDetails: [PersonDetail],
         personContacts: [PersonContact]
     ) {
-        self.personDetailsSubject = .init(personDetails)
-        self.personContactsSubject = .init(personContacts)
+        self._personDetails = personDetails
+        self._personContacts = personContacts
+    }
+    
+    var personDetailsSequence: AsyncStream<[PersonDetail]> {
+        AsyncStream { continuation in
+            // Send current value immediately
+            continuation.yield(_personDetails)
+            
+            // Store continuation for future updates with unique ID
+            let id = UUID()
+            _detailsContinuations[id] = continuation
+            
+            // Clean up when cancelled
+            continuation.onTermination = { @Sendable [weak self] _ in
+                Task {
+                    await self?.removeDetailsContinuation(id)
+                }
+            }
+        }
+    }
+
+    var personContactsSequence: AsyncStream<[PersonContact]> {
+        AsyncStream { continuation in
+            // Send current value immediately  
+            continuation.yield(_personContacts)
+            
+            // Store continuation for future updates with unique ID
+            let id = UUID()
+            _contactsContinuations[id] = continuation
+            
+            // Clean up when cancelled
+            continuation.onTermination = { @Sendable [weak self] _ in
+                Task {
+                    await self?.removeContactsContinuation(id)
+                }
+            }
+        }
     }
     
     func addPerson(
         detail: PersonDetail,
         contact: PersonContact
     ) {
-        self.personDetailsSubject.value.append(detail)
-        self.personContactsSubject.value.append(contact)
+        _personDetails.append(detail)
+        _personContacts.append(contact)
+        
+        // Notify all subscribers of the changes
+        notifyDetailsSubscribers()
+        notifyContactsSubscribers()
+    }
+    
+    func getCurrentDetails() -> [PersonDetail] {
+        return _personDetails
+    }
+    
+    func getCurrentContacts() -> [PersonContact] {
+        return _personContacts
+    }
+    
+    // MARK: - Private Helper Methods
+    
+    private func removeDetailsContinuation(_ id: UUID) {
+        _detailsContinuations.removeValue(forKey: id)
+    }
+    
+    private func removeContactsContinuation(_ id: UUID) {
+        _contactsContinuations.removeValue(forKey: id)
+    }
+    
+    private func notifyDetailsSubscribers() {
+        for continuation in _detailsContinuations.values {
+            continuation.yield(_personDetails)
+        }
+    }
+    
+    private func notifyContactsSubscribers() {
+        for continuation in _contactsContinuations.values {
+            continuation.yield(_personContacts)
+        }
     }
     
 }

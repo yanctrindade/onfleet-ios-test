@@ -1,20 +1,44 @@
 import Foundation
-import Combine
 
-final class PhoneBookManager: ObservableObject {
+final class PhoneBookManager {
     
-    @Published var records: [PhoneBookRecord] = []
+    private var records: [PhoneBookRecord] = []
+    private var _recordsStream: AsyncStream<[PhoneBookRecord]>?
+    private var _recordsContinuation: AsyncStream<[PhoneBookRecord]>.Continuation?
     let source: PhoneBookSource
-    private var cancellables = Set<AnyCancellable>()
+    private var observationTask: Task<Void, Never>?
+    
+    // Computed property to safely access records from main actor
+    @MainActor 
+    var currentRecords: [PhoneBookRecord] {
+        return records
+    }
+    
+    var recordsSequence: AsyncStream<[PhoneBookRecord]> {
+        if let stream = _recordsStream {
+            return stream
+        }
+        
+        let (stream, continuation) = AsyncStream<[PhoneBookRecord]>.makeStream()
+        _recordsStream = stream
+        _recordsContinuation = continuation
+        
+        continuation.yield(records)
+        
+        return stream
+    }
     
     init(source: PhoneBookSource) {
         self.source = source
-        self.subscribeToSource()
+        self.startObservingSource()
     }
-    // Add methods for managing records as needed
     
-    func addRecord(from entry: NewPhoneBookRecord) {
-        self.source.addPerson(
+    deinit {
+        observationTask?.cancel()
+    }
+    
+    func addRecord(from entry: NewPhoneBookRecord) async {
+        await self.source.addPerson(
             detail: .init(
                 id: entry.id,
                 name: entry.name
@@ -30,28 +54,50 @@ final class PhoneBookManager: ObservableObject {
 
 private extension PhoneBookManager {
     
-    func subscribeToSource() {
-        Publishers.CombineLatest(
-            self.source.personDetails,
-            self.source.personContacts
-        )
-        .map({ details, contacts in
-            return details.compactMap({ detail in
-                guard let contact = contacts.first(where: { $0.id == detail.id }) else {
-                    return nil
+    func startObservingSource() {
+        observationTask = Task {
+            await observeDataSources()
+        }
+    }
+    
+    func observeDataSources() async {
+        // Since we need to combine two AsyncSequences, we'll use a different approach
+        // We'll observe both sources and manually combine the data
+        await withTaskGroup(of: Void.self) { group in
+            
+            group.addTask {
+                for await _ in await self.source.personDetailsSequence {
+                    await self.updateRecords()
                 }
-                return PhoneBookRecord(
-                    id: detail.id,
-                    detail: detail,
-                    contact: contact
-                )
-            })
-        })
-        .receive(on: DispatchQueue.main)
-        .sink(receiveValue: { [weak self] records in
-            self?.records = records
-        })
-        .store(in: &self.cancellables)
+            }
+            
+            group.addTask {
+                for await _ in await self.source.personContactsSequence {
+                    await self.updateRecords()
+                }
+            }
+        }
+    }
+    
+    func updateRecords() async {
+        let details = await source.getCurrentDetails()
+        let contacts = await source.getCurrentContacts()
+        
+        let combinedRecords: [PhoneBookRecord] = details.compactMap { detail in
+            guard let contact = contacts.first(where: { $0.id == detail.id }) else {
+                return nil
+            }
+            return PhoneBookRecord(
+                id: detail.id,
+                detail: detail,
+                contact: contact
+            )
+        }
+
+        await MainActor.run {
+            self.records = combinedRecords
+            self._recordsContinuation?.yield(combinedRecords)
+        }
     }
     
 }

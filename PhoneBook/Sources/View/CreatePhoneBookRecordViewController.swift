@@ -59,9 +59,14 @@ private extension CreatePhoneBookRecordViewController {
             name: name,
             phoneNumber: phoneNumber
         )
-        self.manager.addRecord(from: newRecord)
-        self.onCreate?(newRecord)
-        self.dismiss(animated: true)
+        
+        Task {
+            await self.manager.addRecord(from: newRecord)
+            await MainActor.run {
+                self.onCreate?(newRecord)
+                self.dismiss(animated: true)
+            }
+        }
     }
     
     @IBAction

@@ -1,15 +1,14 @@
 import UIKit
+import ComposableArchitecture
 
 class CreatePhoneBookRecordViewController: UIViewController {
-    
-    // Outlets for name and phone number fields (to be connected in IB)
+
     @IBOutlet weak var nameTextField: UITextField!
     @IBOutlet weak var phoneNumberTextField: UITextField!
     @IBOutlet weak var idTextField: UITextField!
     
-    // Completion handler to return the new record
     var onCreate: ((NewPhoneBookRecord) -> Void)?
-    var manager: PhoneBookManager!
+    var store: PhoneBookStore!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -60,13 +59,10 @@ private extension CreatePhoneBookRecordViewController {
             phoneNumber: phoneNumber
         )
         
-        Task {
-            await self.manager.addRecord(from: newRecord)
-            await MainActor.run {
-                self.onCreate?(newRecord)
-                self.dismiss(animated: true)
-            }
-        }
+        store.send(.addRecord(newRecord))
+        
+        self.onCreate?(newRecord)
+        self.dismiss(animated: true)
     }
     
     @IBAction

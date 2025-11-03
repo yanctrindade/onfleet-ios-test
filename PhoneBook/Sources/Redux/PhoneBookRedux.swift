@@ -143,7 +143,7 @@ struct PhoneBookFeature {
     private func generateRandomRecords(send: Send<PhoneBookFeature.Action>) async {
         // Import Fakery for random data generation
         let faker = Fakery.Faker()
-        let records = (0..<100).map { _ in
+        let records = (0..<5).map { _ in
             NewPhoneBookRecord(
                 id: .init(faker.number.randomInt()),
                 name: faker.name.name(),

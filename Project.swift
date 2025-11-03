@@ -33,7 +33,9 @@ let project = Project(
             ]),
             sources: ["PhoneBook/Sources/**"],
             resources: ["PhoneBook/Resources/**"],
-            dependencies: []
+            dependencies: [
+                .external(name: "ComposableArchitecture")
+            ]
         ),
         .target(
             name: "UnitTests",

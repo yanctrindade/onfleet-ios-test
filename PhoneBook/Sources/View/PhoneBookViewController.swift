@@ -134,7 +134,7 @@ private extension PhoneBookViewController {
     
     func addRandomizedRecords() async {
         let faker = Faker()
-        let records = (0..<100).map({ _ in self.makePhoneBookRecord(using: faker) })
+        let records = (0..<5).map({ _ in self.makePhoneBookRecord(using: faker) })
 
         // Maintain the threaded nature using TaskGroup to simulate 
         // multi-threaded access to a critical area (the manager)

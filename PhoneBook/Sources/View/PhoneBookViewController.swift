@@ -19,14 +19,18 @@ class PhoneBookViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+
         if self.manager == nil {
             self.manager = PhoneBookManagerFactory.makeDefaultManager()
         }
+
         self.tableView.register(
             UITableViewCell.self,
             forCellReuseIdentifier: Self.cellIdentifier
         )
+
         self.tableView.tableHeaderView = self.searchBar
+
         Publishers.CombineLatest(
             self.manager.$records,
             self.$searchText
@@ -47,7 +51,6 @@ class PhoneBookViewController: UIViewController {
             self?.tableView.reloadData()
         })
         .store(in: &self.cancellables)
-        // Additional setup if needed
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
@@ -110,9 +113,11 @@ extension PhoneBookViewController {
     @IBAction
     func randomizeButtonTapped(_ sender: Any) {
         self.randomizeButton.isEnabled = false
-        self.addRandomizedRecords(completion: { [weak self] in
-            self?.randomizeButton.isEnabled = true
-        })
+        
+        Task { @MainActor in
+            await self.addRandomizedRecords()
+            self.randomizeButton.isEnabled = true
+        }
     }
     
 }
@@ -127,33 +132,33 @@ private extension PhoneBookViewController {
         )
     }
     
-    func addRandomizedRecords(completion: @escaping () -> Void) {
+    func addRandomizedRecords() async {
         let faker = Faker()
-        let records = (0..<5).map({ _ in self.makePhoneBookRecord(using: faker) })
-        let group = DispatchGroup()
+        let records = (0..<100).map({ _ in self.makePhoneBookRecord(using: faker) })
 
-        // Please keep the randomizer threaded, but you can refactor it.
-        // It simulates multi-threaded access to a critical area.
-
-        DispatchQueue.concurrentPerform(
-            iterations: 4,
-            execute: { [managerQueue, manager] index in
-                group.enter()
-                let startIndex = index * (records.count / 4)
-                let endIndex = (index == 3) ? records.count : (index + 1) * (records.count / 4)
-                
-                for i in startIndex..<endIndex {
-                    managerQueue.sync(execute: {
+        // Maintain the threaded nature using TaskGroup to simulate 
+        // multi-threaded access to a critical area (the manager)
+        await withTaskGroup(of: Void.self) { group in
+            let numberOfThreads = 4
+            let recordsPerThread = records.count / numberOfThreads
+            
+            for threadIndex in 0..<numberOfThreads {
+                group.addTask { [manager] in
+                    let startIndex = threadIndex * recordsPerThread
+                    let endIndex = (threadIndex == numberOfThreads - 1) 
+                        ? records.count 
+                        : (threadIndex + 1) * recordsPerThread
+                    
+                    // Each task processes its portion of records
+                    // This simulates concurrent access to the critical area (manager)
+                    for i in startIndex..<endIndex {
                         manager?.addRecord(from: records[i])
-                    })
+                    }
                 }
-                group.leave()
             }
-        )
-        group.notify(
-            queue: .main,
-            execute: { completion() }
-        )
+            
+            // All tasks complete before continuing
+        }
     }
     
 }

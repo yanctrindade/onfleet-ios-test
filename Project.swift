@@ -34,7 +34,8 @@ let project = Project(
             sources: ["PhoneBook/Sources/**"],
             resources: ["PhoneBook/Resources/**"],
             dependencies: [
-                .external(name: "ComposableArchitecture")
+                .external(name: "ComposableArchitecture"),
+                .external(name: "Fakery")
             ]
         ),
         .target(

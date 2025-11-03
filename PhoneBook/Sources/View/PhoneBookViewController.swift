@@ -152,7 +152,7 @@ private extension PhoneBookViewController {
                     // Each task processes its portion of records
                     // This simulates concurrent access to the critical area (manager)
                     for i in startIndex..<endIndex {
-                        manager?.addRecord(from: records[i])
+                        await manager?.addRecord(from: records[i])
                     }
                 }
             }

@@ -1,33 +1,46 @@
 import Foundation
-import Combine
 
-final class PhoneBookSource {
+actor PhoneBookSource {
     
-    private let personDetailsSubject: CurrentValueSubject<[PersonDetail], Never>
-    private let personContactsSubject: CurrentValueSubject<[PersonContact], Never>
-    
-    var personDetails: AnyPublisher<[PersonDetail], Never> {
-        return self.personDetailsSubject.eraseToAnyPublisher()
-    }
-    
-    var personContacts: AnyPublisher<[PersonContact], Never> {
-        return self.personContactsSubject.eraseToAnyPublisher()
-    }
+    private var _personDetails: [PersonDetail]
+    private var _personContacts: [PersonContact]
     
     init(
         personDetails: [PersonDetail],
         personContacts: [PersonContact]
     ) {
-        self.personDetailsSubject = .init(personDetails)
-        self.personContactsSubject = .init(personContacts)
+        self._personDetails = personDetails
+        self._personContacts = personContacts
+    }
+    
+    var personDetailsSequence: AsyncStream<[PersonDetail]> {
+        AsyncStream { continuation in
+            continuation.yield(_personDetails)
+            // TODO: store continuations and notify on changes
+        }
+    }
+
+    var personContactsSequence: AsyncStream<[PersonContact]> {
+        AsyncStream { continuation in
+            continuation.yield(_personContacts)
+            // TODO: store continuations and notify on changes
+        }
     }
     
     func addPerson(
         detail: PersonDetail,
         contact: PersonContact
     ) {
-        self.personDetailsSubject.value.append(detail)
-        self.personContactsSubject.value.append(contact)
+        _personDetails.append(detail)
+        _personContacts.append(contact)
+    }
+    
+    func getCurrentDetails() -> [PersonDetail] {
+        return _personDetails
+    }
+    
+    func getCurrentContacts() -> [PersonContact] {
+        return _personContacts
     }
     
 }

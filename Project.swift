@@ -33,7 +33,10 @@ let project = Project(
             ]),
             sources: ["PhoneBook/Sources/**"],
             resources: ["PhoneBook/Resources/**"],
-            dependencies: []
+            dependencies: [
+                .external(name: "ComposableArchitecture"),
+                .external(name: "Fakery")
+            ]
         ),
         .target(
             name: "UnitTests",

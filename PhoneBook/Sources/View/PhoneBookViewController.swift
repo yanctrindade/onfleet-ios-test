@@ -1,5 +1,6 @@
 import UIKit
 import Fakery
+import ComposableArchitecture
 
 class PhoneBookViewController: UIViewController {
     
@@ -7,19 +8,13 @@ class PhoneBookViewController: UIViewController {
     @IBOutlet weak var searchBar: UISearchBar!
     @IBOutlet weak var randomizeButton: UIButton!
     
-    var manager: PhoneBookManager!
+    private let store: PhoneBookStore = Store.phoneBookStore()
     
-    private var searchText: String?
-    private var filteredRecords: [PhoneBookRecord] = []
-    private var observationTask: Task<Void, Never>?
+    private var storeObservationTask: Task<Void, Never>?
     private static let cellIdentifier = "PhoneBookRecordCell"
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        if self.manager == nil {
-            self.manager = PhoneBookManagerFactory.makeDefaultManager()
-        }
 
         self.tableView.register(
             UITableViewCell.self,
@@ -28,12 +23,12 @@ class PhoneBookViewController: UIViewController {
 
         self.tableView.tableHeaderView = self.searchBar
         
-        // Start observing records changes
-        startObservingRecords()
+        startObservingStore()
+        store.send(.viewDidLoad)
     }
     
     deinit {
-        observationTask?.cancel()
+        storeObservationTask?.cancel()
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
@@ -42,7 +37,7 @@ class PhoneBookViewController: UIViewController {
               let destination = navigationController.viewControllers.first as? CreatePhoneBookRecordViewController else {
             return
         }
-        destination.manager = self.manager
+        destination.store = self.store
     }
     
 }
@@ -55,7 +50,7 @@ extension PhoneBookViewController: UITableViewDataSource {
         _ tableView: UITableView,
         numberOfRowsInSection section: Int
     ) -> Int {
-        return self.filteredRecords.count
+        return store.state.filteredRecords.count
     }
     
     func tableView(
@@ -66,7 +61,7 @@ extension PhoneBookViewController: UITableViewDataSource {
             withIdentifier: Self.cellIdentifier,
             for: indexPath
         )
-        let record = self.filteredRecords[indexPath.row]
+        let record = store.state.filteredRecords[indexPath.row]
         var content = cell.defaultContentConfiguration()
         content.text = record.detail.name
         content.secondaryText = record.contact.phoneNumber
@@ -84,8 +79,7 @@ extension PhoneBookViewController: UISearchBarDelegate {
         _ searchBar: UISearchBar,
         textDidChange searchText: String
     ) {
-        self.searchText = searchText.isEmpty ? nil : searchText
-        updateFilteredRecords()
+        store.send(.searchTextChanged(searchText))
     }
     
 }
@@ -96,83 +90,28 @@ extension PhoneBookViewController {
     
     @IBAction
     func randomizeButtonTapped(_ sender: Any) {
-        self.randomizeButton.isEnabled = false
-        
-        Task { @MainActor in
-            await self.addRandomizedRecords()
-            self.randomizeButton.isEnabled = true
-        }
+        store.send(.randomizeButtonTapped)
     }
     
 }
 
 private extension PhoneBookViewController {
-    
-    func startObservingRecords() {
-        observationTask = Task { @MainActor in
-            for await records in manager.recordsSequence {
-                await updateFilteredRecords(with: records)
-            }
-        }
-    }
-    
-    func updateFilteredRecords(with records: [PhoneBookRecord]? = nil) async {
-        let currentRecords = records ?? manager.currentRecords
-        
-        let filtered: [PhoneBookRecord]
-        if let searchText = searchText, !searchText.isEmpty {
-            filtered = currentRecords.filter {
-                $0.detail.name.localizedCaseInsensitiveContains(searchText) ||
-                $0.contact.phoneNumber.localizedCaseInsensitiveContains(searchText)
-            }
-        } else {
-            filtered = currentRecords
-        }
-        
-        self.filteredRecords = filtered
-        self.tableView.reloadData()
-    }
-    
-    func updateFilteredRecords() {
-        Task { @MainActor in
-            await updateFilteredRecords()
-        }
-    }
-    
-    func makePhoneBookRecord(using faker: Faker) -> NewPhoneBookRecord {
-        return .init(
-            id: .init(faker.number.randomInt()),
-            name: faker.name.name(),
-            phoneNumber: faker.phoneNumber.phoneNumber()
-        )
-    }
-    
-    func addRandomizedRecords() async {
-        let faker = Faker()
-        let records = (0..<5).map({ _ in self.makePhoneBookRecord(using: faker) })
 
-        // Maintain the threaded nature using TaskGroup to simulate 
-        // multi-threaded access to a critical area (the manager)
-        await withTaskGroup(of: Void.self) { group in
-            let numberOfThreads = 4
-            let recordsPerThread = records.count / numberOfThreads
-            
-            for threadIndex in 0..<numberOfThreads {
-                group.addTask { [manager] in
-                    let startIndex = threadIndex * recordsPerThread
-                    let endIndex = (threadIndex == numberOfThreads - 1) 
-                        ? records.count 
-                        : (threadIndex + 1) * recordsPerThread
-                    
-                    // Each task processes its portion of records
-                    // This simulates concurrent access to the critical area (manager)
-                    for i in startIndex..<endIndex {
-                        await manager?.addRecord(from: records[i])
-                    }
-                }
+    func startObservingStore() {
+        storeObservationTask = Task { @MainActor in
+            for await state in store.publisher.values {
+                handleStateChange(state)
             }
-            
-            // All tasks complete before continuing
+        }
+    }
+    
+    func handleStateChange(_ state: PhoneBookFeature.State) {
+        self.randomizeButton.isEnabled = !state.isRandomizing
+
+        self.tableView.reloadData()
+
+        if searchBar.text != state.searchText {
+            searchBar.text = state.searchText
         }
     }
     

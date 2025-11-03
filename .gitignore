@@ -68,3 +68,13 @@ Derived/
 
 ### Tuist managed dependencies ###
 Tuist/.build
+Tuist/Dependencies/
+Tuist/Dependencies.swift
+
+### Tuist cache ###
+.tuist-cache/
+
+### Tuist generated files ###
+*.xcodeproj
+*.xcworkspace
+Project.swift.bak

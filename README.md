@@ -23,9 +23,9 @@ Please refactor the codebase to the requirements below:
 
 
 5. Submit a Git repo.
-- Please email gustav@onfleet.com
-- You can send a zipped repo, or a link to a repo that we can access.
-- We'd like to see your commit history.
+- Please email kjell@onfleet.com and CC michal@onfleet.com and mhorvatovic@onfleet.com 
+- You can send a zipped repo, or a link to a created repo that we can access.
+- We'd like to see your commit history .
 
 # Notes
 
